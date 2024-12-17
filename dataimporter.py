@@ -8,10 +8,10 @@ import logging
 
 # Database connection configuration
 DB_CONFIG = {
-    "dbname": "odns",
-    "user": "odnsbackend",
-    "password": "odnsP@ssw0rd",
-    "host": "141.76.19.143",
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": "mysecretpassword",
+    "host": "localhost",
     "port": "5432"
 }
 
@@ -70,12 +70,13 @@ def insert_data(cursor, table_name, data, columns):
     cursor.execute(insert_query, data)
 
 # Read CSV and insert data
-def process_csv(file_path, file_type, connection):
+def process_csv(file_path, file_type, connection,scan_date):
     columns = CSV_COLUMNS_MAP[file_type]
     columns.append('protocol')
+    columns.append("scan_date")
     with open(file_path, "r") as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=";")
-        print(csv_reader.fieldnames)
+        #print(csv_reader.fieldnames)
         #next(csv_reader)
         with connection.cursor() as cursor:
             bulkCount = 0
@@ -83,6 +84,7 @@ def process_csv(file_path, file_type, connection):
                 # Ensure all columns exist in row, filling missing ones with None
                 
                 row['protocol'] = file_type
+                row['scan_date'] = scan_date
                 data = []
                 for col in columns:
                     if  col in ft.fieldtypers.keys():
@@ -97,7 +99,7 @@ def process_csv(file_path, file_type, connection):
                 if bulkCount >= BATCHLIMIT:
                     connection.commit()
                     # test
-                    #return
+                    return
         connection.commit()
 
 def main():
@@ -108,35 +110,38 @@ def main():
     try:
         # Connect to PostgreSQL
         with psycopg.connect(**DB_CONFIG) as conn:
-            print("Connected to the database.")
+            #print("Connected to the database.")
+            Logger.info("Connected to the database")
             #t = conn.cursor()
             #t.execute("select * from odns.dns_entries")
             #print(t.fetchall())
             
             # Process both CSV files
-            print("Processing TCP CSV...")
+            #print("Processing TCP CSV...")
             Logger.info("Started processing TCP dns data")
             tcp_csv_path,archive_tcp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=TCP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
+            scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
             if tcp_csv_path:
-                process_csv(tcp_csv_path, "tcp", conn)
+                process_csv(tcp_csv_path, "tcp", conn,scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
                 if archive_tcp_csv_path:
                     zu.move_processed_file(archive_tcp_csv_path,PROCESSED_DIRECTORY)
-                    print("Cleaned after processing files for TCP")
+                    #print("Cleaned after processing files for TCP")
                     Logger.info("Cleaned after processing files for TCP")
             
-            print("Processing UDP CSV...")
+            #print("Processing UDP CSV...")
             Logger.info("Started processing UDP dns data")
             udp_csv_path,archive_udp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=UDP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
+            scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
             if udp_csv_path:
-                process_csv(udp_csv_path, "udp", conn)
+                process_csv(udp_csv_path, "udp", conn,scan_udp_date)
                 zu.delete_file(udp_csv_path)
                 if archive_udp_csv_path:
                     zu.move_processed_file(archive_udp_csv_path,PROCESSED_DIRECTORY)
-                    print("Cleaned after processing files for UDP")
+                    #print("Cleaned after processing files for UDP")
                     Logger.info("Cleaned after processing files for UDP")
             
-            print("Data insertion completed successfully.")
+            #print("Data insertion completed successfully.")
             Logger.info("Data insertion completed successfully")
     except Exception as e:
         Logger.error(f"Error occured: {e}")

@@ -2,6 +2,7 @@ import glob
 import os
 import gzip
 import shutil
+import re
 
 def get_most_recent_file_with_prefix(directory, prefix,extention):
     # Use glob to find files starting with the given prefix
@@ -19,8 +20,19 @@ def unzip(file_path,output_csv_path):
     with gzip.open(file_path,"rt") as gz_file:
         with open(output_csv_path,"w",newline='') as csv_file:
             csv_file.write(gz_file.read())
-    print(f"CSV extracted and saved to : {output_csv_path}")
+    #print(f"CSV extracted and saved to : {output_csv_path}")
 
+def extract_file_date_from_name(fullPath):
+    basename:str = os.path.basename(fullPath)
+    # Regex pattern to extract the date in YYYY-MM-DD format
+    pattern = r"\d{4}-\d{2}-\d{2}"
+    # Search for the date in the string
+    match = re.search(pattern, basename)
+    if match:
+        date = match.group(0)
+        return date
+    else:
+        return None
 
 def unzip_recent_file_with_prefix(directory, prefix,extention,outputDir)->tuple[str,str]:
     most_recent_file = get_most_recent_file_with_prefix(directory, prefix,extention)
@@ -28,10 +40,10 @@ def unzip_recent_file_with_prefix(directory, prefix,extention,outputDir)->tuple[
     if most_recent_file:
         outputPath = os.path.join(outputDir, os.path.basename(most_recent_file).replace(extention,'csv'))
         unzip(most_recent_file,outputPath)
-        print(f"The most recent file is: {most_recent_file}")
+        #print(f"The most recent file is: {most_recent_file}")
         return (outputPath,most_recent_file)
     else:
-        print("No files found with the given prefix.")
+        #print("No files found with the given prefix.")
         return None
 
 def delete_file(file_path):
@@ -50,7 +62,7 @@ def move_processed_file(file_path,destination):
         try:
             # Move the file
             shutil.move(file_path, destination)
-            print(f"File moved to {destination}")
+            #print(f"File moved to {destination}")
         except Exception as e:
             print(f"Error moving file: {e}")
     else:
