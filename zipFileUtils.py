@@ -44,7 +44,7 @@ def unzip_recent_file_with_prefix(directory, prefix,extention,outputDir)->tuple[
         return (outputPath,most_recent_file)
     else:
         #print("No files found with the given prefix.")
-        return None
+        return (None,None)
 
 def delete_file(file_path):
     try:
@@ -67,12 +67,3 @@ def move_processed_file(file_path,destination):
             print(f"Error moving file: {e}")
     else:
         print(f"Source file {file_path} does not exist.")
-
-
-""" # Example usage
-directory = "C:\MyFiles\Projects\ODNS\data"
-outputDir = "C:\MyFiles\Projects\ODNS\data"
-prefix = "tcp"
-extention = "csv.gz"
-
-unzip_recent_file_with_prefix(directory,prefix,extention,outputDir) """

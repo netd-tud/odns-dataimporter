@@ -43,16 +43,24 @@ DATABASE_COLUMNS = [
     "asn_response", "prefix_response", "org_response", 
     "country_arecord", "asn_arecord", "prefix_arecord", "org_arecord"
 ]
-
+#Test
 ARCHIVE_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
 TEMP_OUTPUT_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
 PROCESSED_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data\processed"
+# Logging vars
+LOGGING_FILE = r"C:\MyFiles\Projects\ODNS\data\processed\odnsdataimporter_logs.log"
+
+#Live
+#ARCHIVE_DIRECTORY = r"/nfs-dns-data/"
+#TEMP_OUTPUT_DIRECTORY = r"/home/backend/odns_temp_data/"
+#PROCESSED_DIRECTORY = r"/nfs-dns-data/processed/"
+#LOGGING_FILE = r"/home/backend/odns_dataimporter/logs/logs.log"
+
 ARCHIVE_EXTENTION = "csv.gz"
 TCP_PREFIX = "tcp"
 UDP_PREFIX = "udp"
 
-# Logging vars
-LOGGING_FILE = r"C:\MyFiles\Projects\ODNS\data\processed\odnsdataimporter_logs.log"
+
 
 Logger = logging.getLogger(__name__)
 logging.basicConfig(filename=LOGGING_FILE, encoding='utf-8', level=logging.INFO , format='%(asctime)s %(levelname)s %(message)s',datefmt='%Y-%m-%d %I:%M:%S')
@@ -120,8 +128,9 @@ def main():
             #print("Processing TCP CSV...")
             Logger.info("Started processing TCP dns data")
             tcp_csv_path,archive_tcp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=TCP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
-            scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
+            
             if tcp_csv_path:
+                scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn,scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
                 if archive_tcp_csv_path:
@@ -132,8 +141,9 @@ def main():
             #print("Processing UDP CSV...")
             Logger.info("Started processing UDP dns data")
             udp_csv_path,archive_udp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=UDP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
-            scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
+            
             if udp_csv_path:
+                scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
                 process_csv(udp_csv_path, "udp", conn,scan_udp_date)
                 zu.delete_file(udp_csv_path)
                 if archive_udp_csv_path:
