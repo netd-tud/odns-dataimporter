@@ -43,6 +43,9 @@ DATABASE_COLUMNS = [
     "asn_response", "prefix_response", "org_response", 
     "country_arecord", "asn_arecord", "prefix_arecord", "org_arecord"
 ]
+
+IS_TESTING = True
+
 #Test
 ARCHIVE_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
 TEMP_OUTPUT_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
@@ -107,7 +110,8 @@ def process_csv(file_path, file_type, connection,scan_date):
                 if bulkCount >= BATCHLIMIT:
                     connection.commit()
                     # test
-                    return
+                    if IS_TESTING:
+                        return
         connection.commit()
 
 def main():
