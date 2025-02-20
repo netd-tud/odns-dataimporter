@@ -1,0 +1,9 @@
+[db-connection-params]
+dbname = db 
+user = dbuser 
+password = dbpwd
+host = dbhost 
+port = dbport
+
+[db-table-names]
+odnstable = tablename 
