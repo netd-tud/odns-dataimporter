@@ -1,4 +1,5 @@
 import csv
+import configparser as cp
 import psycopg
 from psycopg import sql
 import fieldtypers as ft
@@ -7,16 +8,11 @@ import logging
 
 
 # Database connection configuration
-DB_CONFIG = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "mysecretpassword",
-    "host": "localhost",
-    "port": "5432"
-}
-
+config = cp.ConfigParser()
+config.read("config.ini")
+DB_CONFIG = config['db-connection-params']
 # Table name
-TABLE_NAME = "odns.dns_entries"
+TABLE_NAME = config['db-table-names']['odnstable']
 BATCHLIMIT = 500
 # Mapping of CSV headers to table columns for both types of CSVs
 CSV_COLUMNS_MAP = {
@@ -44,20 +40,13 @@ DATABASE_COLUMNS = [
     "country_arecord", "asn_arecord", "prefix_arecord", "org_arecord"
 ]
 
-IS_TESTING = True
-
-#Test
-ARCHIVE_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
-TEMP_OUTPUT_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data"
-PROCESSED_DIRECTORY = r"C:\MyFiles\Projects\ODNS\data\processed"
-# Logging vars
-LOGGING_FILE = r"C:\MyFiles\Projects\ODNS\data\processed\odnsdataimporter_logs.log"
+IS_TESTING = False 
 
 #Live
-#ARCHIVE_DIRECTORY = r"/nfs-dns-data/"
-#TEMP_OUTPUT_DIRECTORY = r"/home/backend/odns_temp_data/"
-#PROCESSED_DIRECTORY = r"/nfs-dns-data/processed/"
-#LOGGING_FILE = r"/home/backend/odns_dataimporter/logs/logs.log"
+ARCHIVE_DIRECTORY = r"/data/"
+TEMP_OUTPUT_DIRECTORY = r"/tmp/"
+PROCESSED_DIRECTORY = r"/data/processed/"
+LOGGING_FILE = r"/logs/logs.log"
 
 ARCHIVE_EXTENTION = "csv.gz"
 TCP_PREFIX = "tcp"
@@ -67,7 +56,6 @@ UDP_PREFIX = "udp"
 
 Logger = logging.getLogger(__name__)
 logging.basicConfig(filename=LOGGING_FILE, encoding='utf-8', level=logging.INFO , format='%(asctime)s %(levelname)s %(message)s',datefmt='%Y-%m-%d %I:%M:%S')
-
 
 # Insert data into the database
 def insert_data(cursor, table_name, data, columns):
@@ -116,8 +104,8 @@ def process_csv(file_path, file_type, connection,scan_date):
 
 def main():
     # Example file paths
-    tcp_csv_path = "" #r"C:\MyFiles\Projects\ODNS\data\tcp_dataframe_complete.csv"
-    udp_csv_path = "" #r"C:\MyFiles\Projects\ODNS\data\udp_dataframe_complete.csv"
+    tcp_csv_path = "" 
+    udp_csv_path = "" 
     
     try:
         # Connect to PostgreSQL

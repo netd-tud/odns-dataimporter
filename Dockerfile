@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r ./Configuration/requirements.txt
 # Note that volumes will need to mapped for the scan files to be accessable
 
 # Run the script
-CMD ["python", "dataimporter.py"]
+CMD ["python", "-u", "dataimporter.py"]
