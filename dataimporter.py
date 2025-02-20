@@ -1,4 +1,5 @@
 import csv
+import argparse
 import configparser as cp
 import psycopg
 from psycopg import sql
@@ -103,6 +104,17 @@ def process_csv(file_path, file_type, connection,scan_date):
         connection.commit()
 
 def main():
+    parser = argparse.ArgumentParser(description="Data Importer Health Check")
+    parser.add_argument('--check-health', action='store_true', help='Check health of Postgres and shared drive')
+    args = parser.parse_args()
+
+    if args.check_health:
+        pg_status = check_postgres()
+        drive_status = check_shared_drive()
+        if pg_status and drive_status:
+            sys.exit(0)
+        else:
+            sys.exit(1)
     # Example file paths
     tcp_csv_path = "" 
     udp_csv_path = "" 
@@ -149,5 +161,29 @@ def main():
         Logger.error(f"Error occured: {e}")
         print(f"Error: {e}")
 
-if __name__ == "__main__":
+def check_postgres():
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv('POSTGRES_DB'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            host='postgres_db',
+            port=5432
+        )
+        conn.close()
+        Logger.info("Postgres connection successful")
+        return True
+    except Exception as e:
+        Logger.error(f"Postgres connection failed: {e}")
+        return False
+
+def check_shared_drive():
+    if os.path.exists('/data') and os.access('/data', os.R_OK):
+        Logger.error("Shared drive is accessible")
+        return True
+    else:
+        Logger.error("Shared drive is not accessible")
+        return False
+
+if __name__ == '__main__':
     main()
