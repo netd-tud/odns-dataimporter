@@ -109,16 +109,26 @@ def main():
     args = parser.parse_args()
 
     if args.check_health:
+        print("[*] Health check...")
         pg_status = check_postgres()
         drive_status = check_shared_drive()
         if pg_status and drive_status:
+            print("[*] System healthy.")
+            Logger.info("System health check successfull")
             sys.exit(0)
         else:
+            if not pg_status:
+                print("[*] No postgres connection.")
+                Logger.error("No postgres connection")
+            if not drive_status:
+                print("[*] Failed to access data drive.")
+                Logger.error("No access to shared drive")
             sys.exit(1)
     # Example file paths
     tcp_csv_path = "" 
     udp_csv_path = "" 
     
+    print("[*] Processing data.")
     try:
         # Connect to PostgreSQL
         with psycopg.connect(**DB_CONFIG) as conn:
@@ -129,7 +139,7 @@ def main():
             #print(t.fetchall())
             
             # Process both CSV files
-            #print("Processing TCP CSV...")
+            print("[*] Processing TCP CSV...")
             Logger.info("Started processing TCP dns data")
             tcp_csv_path,archive_tcp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=TCP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
             
@@ -142,7 +152,7 @@ def main():
                     #print("Cleaned after processing files for TCP")
                     Logger.info("Cleaned after processing files for TCP")
             
-            #print("Processing UDP CSV...")
+            print("[*] Processing UDP CSV...")
             Logger.info("Started processing UDP dns data")
             udp_csv_path,archive_udp_csv_path= zu.unzip_recent_file_with_prefix(directory=ARCHIVE_DIRECTORY,prefix=UDP_PREFIX,extention=ARCHIVE_EXTENTION,outputDir=TEMP_OUTPUT_DIRECTORY)
             
@@ -155,7 +165,7 @@ def main():
                     #print("Cleaned after processing files for UDP")
                     Logger.info("Cleaned after processing files for UDP")
             
-            #print("Data insertion completed successfully.")
+            print("[*] Data insertion completed successfully.")
             Logger.info("Data insertion completed successfully")
     except Exception as e:
         Logger.error(f"Error occured: {e}")
