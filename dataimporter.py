@@ -8,6 +8,7 @@ import zipFileUtils as zu
 import logging
 import os
 import sys
+import time
 
 # Database connection configuration
 config = cp.ConfigParser()
@@ -15,7 +16,7 @@ config.read("config.ini")
 DB_CONFIG = config["db-connection-params"]
 # Table name
 TABLE_NAME = config["db-table-names"]["odnstable"]
-BATCHLIMIT = 500
+BATCHLIMIT = 200000
 # Mapping of CSV headers to table columns for both types of CSVs
 CSV_COLUMNS_MAP = {
     "tcp": [
@@ -98,7 +99,7 @@ Logger = logging.getLogger(__name__)
 logging.basicConfig(
     filename=LOGGING_FILE,
     encoding="utf-8",
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %I:%M:%S",
 )
@@ -113,7 +114,7 @@ def insert_data(cursor, table_name, data, columns):
         fields=sql.SQL(", ").join(map(sql.Identifier, columns)),
         placeholders=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
     )
-    cursor.execute(insert_query, data)
+    cursor.executemany(insert_query, data)
 
 
 # Read CSV and insert data
@@ -125,11 +126,12 @@ def process_csv(file_path, file_type, connection, scan_date):
         csv_reader = csv.DictReader(csv_file, delimiter=";")
         # print(csv_reader.fieldnames)
         # next(csv_reader)
+        records = []
         with connection.cursor() as cursor:
             bulkCount = 0
+            start_time = time.time()  # Start timer
             for row in csv_reader:
                 # Ensure all columns exist in row, filling missing ones with None
-
                 row["protocol"] = file_type
                 row["scan_date"] = scan_date
                 data = []
@@ -141,16 +143,35 @@ def process_csv(file_path, file_type, connection, scan_date):
                         data.append(
                             None if row.get(col, None) == "" else row.get(col, None)
                         )
-
-                insert_data(cursor, TABLE_NAME, data, columns)
+                records.append(data)
+                # insert_data(cursor, TABLE_NAME, data, columns)
                 bulkCount = bulkCount + 1
                 # To-Do implement a batch count before commit
                 if bulkCount >= BATCHLIMIT:
+                    insert_data(cursor, TABLE_NAME, records, columns)
                     connection.commit()
+                    end_time = time.time()  # End timer
+                    execution_time = end_time - start_time
+                    Logger.debug(
+                        f"Bulk count: {bulkCount} Execution Time: {execution_time:.6f} seconds"
+                    )
+                    start_time = time.time()  # Start timer
+                    bulkCount = 0
+                    records.clear()
                     # test
                     if IS_TESTING:
                         return
-        connection.commit()
+        if records:
+            bulkCount = len(records)
+            start_time = time.time()  # Start timer
+            with connection.cursor() as cursor:
+                insert_data(cursor, TABLE_NAME, records, columns)
+            connection.commit()
+            end_time = time.time()  # End timer
+            execution_time = end_time - start_time
+            Logger.debug(
+                f"Bulk count: {bulkCount} Execution Time: {execution_time:.6f} seconds"
+            )
 
 
 def main():
@@ -179,6 +200,9 @@ def main():
                 Logger.error("No access to shared drive")
             sys.exit(1)
     # Example file paths
+    tcp_csv_path = ""  # r"C:\MyFiles\Projects\ODNS\data\tcp_dataframe_complete.csv"
+    udp_csv_path = ""  # r"C:\MyFiles\Projects\ODNS\data\udp_dataframe_complete.csv"
+
     tcp_csv_path = ""
     udp_csv_path = ""
 
@@ -187,14 +211,27 @@ def main():
         # Connect to PostgreSQL
         with psycopg.connect(**DB_CONFIG) as conn:
             # print("Connected to the database.")
+            # print("Connected to the database.")
             Logger.info("Connected to the database")
             # t = conn.cursor()
             # t.execute("select * from odns.dns_entries")
             # print(t.fetchall())
 
+            # t = conn.cursor()
+            # t.execute("select * from odns.dns_entries")
+            # print(t.fetchall())
+
             # Process both CSV files
+            # print("Processing TCP CSV...")
             print("[*] Processing TCP CSV...")
             Logger.info("Started processing TCP dns data")
+            tcp_csv_path, archive_tcp_csv_path = zu.unzip_recent_file_with_prefix(
+                directory=ARCHIVE_DIRECTORY,
+                prefix=TCP_PREFIX,
+                extention=ARCHIVE_EXTENTION,
+                outputDir=TEMP_OUTPUT_DIRECTORY,
+            )
+
             tcp_csv_path, archive_tcp_csv_path = zu.unzip_recent_file_with_prefix(
                 directory=ARCHIVE_DIRECTORY,
                 prefix=TCP_PREFIX,
@@ -205,11 +242,16 @@ def main():
             if tcp_csv_path:
                 scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
+                process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
                 if archive_tcp_csv_path:
                     zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
                     # print("Cleaned after processing files for TCP")
+                    zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
+                    # print("Cleaned after processing files for TCP")
                     Logger.info("Cleaned after processing files for TCP")
+
+            # print("Processing UDP CSV...")
 
             print("[*] Processing UDP CSV...")
             Logger.info("Started processing UDP dns data")
@@ -220,14 +262,26 @@ def main():
                 outputDir=TEMP_OUTPUT_DIRECTORY,
             )
 
+            udp_csv_path, archive_udp_csv_path = zu.unzip_recent_file_with_prefix(
+                directory=ARCHIVE_DIRECTORY,
+                prefix=UDP_PREFIX,
+                extention=ARCHIVE_EXTENTION,
+                outputDir=TEMP_OUTPUT_DIRECTORY,
+            )
+
             if udp_csv_path:
                 scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
+                process_csv(udp_csv_path, "udp", conn, scan_udp_date)
                 process_csv(udp_csv_path, "udp", conn, scan_udp_date)
                 zu.delete_file(udp_csv_path)
                 if archive_udp_csv_path:
                     zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
                     # print("Cleaned after processing files for UDP")
+                    zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
+                    # print("Cleaned after processing files for UDP")
                     Logger.info("Cleaned after processing files for UDP")
+
+            # print("Data insertion completed successfully.")
 
             print("[*] Data insertion completed successfully.")
             Logger.info("Data insertion completed successfully")
