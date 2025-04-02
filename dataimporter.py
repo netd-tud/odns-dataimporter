@@ -107,7 +107,7 @@ Logger = logging.getLogger(__name__)
 logging.basicConfig(
     filename=LOGGING_FILE,
     encoding="utf-8",
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %I:%M:%S",
 )
@@ -122,7 +122,7 @@ def insert_data(cursor, table_name, data, columns):
         fields=sql.SQL(", ").join(map(sql.Identifier, columns)),
         placeholders=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
     )
-    cursor.execute(insert_query, data)
+    cursor.executemany(insert_query, data)
 
 
 # Read CSV and insert data
@@ -134,6 +134,7 @@ def process_csv(file_path, file_type, connection, scan_date):
         csv_reader = csv.DictReader(csv_file, delimiter=";")
         # print(csv_reader.fieldnames)
         # next(csv_reader)
+        records = []
         with connection.cursor() as cursor:
             bulkCount = 0
             start_time = time.time()  # Start timer
@@ -150,11 +151,12 @@ def process_csv(file_path, file_type, connection, scan_date):
                         data.append(
                             None if row.get(col, None) == "" else row.get(col, None)
                         )
-
-                insert_data(cursor, TABLE_NAME, data, columns)
+                records.append(data)
+                # insert_data(cursor, TABLE_NAME, data, columns)
                 bulkCount = bulkCount + 1
                 # To-Do implement a batch count before commit
                 if bulkCount >= BATCHLIMIT:
+                    insert_data(cursor, TABLE_NAME, records, columns)
                     connection.commit()
                     end_time = time.time()  # End timer
                     execution_time = end_time - start_time
@@ -163,10 +165,21 @@ def process_csv(file_path, file_type, connection, scan_date):
                     )
                     start_time = time.time()  # Start timer
                     bulkCount = 0
+                    records.clear()
                     # test
                     if IS_TESTING:
                         return
-        connection.commit()
+        if records:
+            bulkCount = len(records)
+            start_time = time.time()  # Start timer
+            with connection.cursor() as cursor:
+                insert_data(cursor, TABLE_NAME, records, columns)
+            connection.commit()
+            end_time = time.time()  # End timer
+            execution_time = end_time - start_time
+            Logger.debug(
+                f"Bulk count: {bulkCount} Execution Time: {execution_time:.6f} seconds"
+            )
 
 
 def main():
