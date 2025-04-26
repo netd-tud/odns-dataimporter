@@ -232,21 +232,11 @@ def main():
                 outputDir=TEMP_OUTPUT_DIRECTORY,
             )
 
-            tcp_csv_path, archive_tcp_csv_path = zu.unzip_recent_file_with_prefix(
-                directory=ARCHIVE_DIRECTORY,
-                prefix=TCP_PREFIX,
-                extention=ARCHIVE_EXTENTION,
-                outputDir=TEMP_OUTPUT_DIRECTORY,
-            )
-
             if tcp_csv_path:
                 scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
-                process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
                 if archive_tcp_csv_path:
-                    zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
-                    # print("Cleaned after processing files for TCP")
                     zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
                     # print("Cleaned after processing files for TCP")
                     Logger.info("Cleaned after processing files for TCP")
@@ -262,21 +252,11 @@ def main():
                 outputDir=TEMP_OUTPUT_DIRECTORY,
             )
 
-            udp_csv_path, archive_udp_csv_path = zu.unzip_recent_file_with_prefix(
-                directory=ARCHIVE_DIRECTORY,
-                prefix=UDP_PREFIX,
-                extention=ARCHIVE_EXTENTION,
-                outputDir=TEMP_OUTPUT_DIRECTORY,
-            )
-
             if udp_csv_path:
                 scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
                 process_csv(udp_csv_path, "udp", conn, scan_udp_date)
-                process_csv(udp_csv_path, "udp", conn, scan_udp_date)
                 zu.delete_file(udp_csv_path)
                 if archive_udp_csv_path:
-                    zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
-                    # print("Cleaned after processing files for UDP")
                     zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
                     # print("Cleaned after processing files for UDP")
                     Logger.info("Cleaned after processing files for UDP")
@@ -303,7 +283,7 @@ def check_postgres():
 
 def check_shared_drive():
     if os.path.exists("/data") and os.access("/data", os.R_OK):
-        Logger.error("Shared drive is accessible")
+        Logger.info("Shared drive is accessible")
         return True
     else:
         Logger.error("Shared drive is not accessible")
