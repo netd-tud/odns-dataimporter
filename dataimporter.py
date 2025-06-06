@@ -265,9 +265,11 @@ def main():
 
             print("[*] Data insertion completed successfully.")
             Logger.info("Data insertion completed successfully")
+            sys.exit(0)
     except Exception as e:
         Logger.error(f"Error occured: {e}")
         print(f"Error: {e}")
+        sys.exit(1)
 
 
 def check_postgres():
