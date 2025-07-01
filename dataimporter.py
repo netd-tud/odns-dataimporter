@@ -174,6 +174,22 @@ def process_csv(file_path, file_type, connection, scan_date):
             )
 
 
+def delete_db_data_by_proto(connection, proto: str) -> None:
+    try:
+        with connection.cursor() as cursor:
+            delete_query = sql.SQL(
+                "DELETE FROM {table} WHERE protocol = {protocol}"
+            ).format(
+                table=sql.SQL(TABLE_NAME),
+                protocol=sql.Literal(proto),
+            )
+            cursor.execute(delete_query)
+        connection.commit()
+    except Exception as ex:
+        Logger.error(f"Error occured: {ex}")
+        print(f"Error: {ex}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Data Importer Health Check")
     parser.add_argument(
@@ -233,6 +249,8 @@ def main():
             )
 
             if tcp_csv_path:
+                Logger.info("Deleting old TCP data")
+                delete_db_data_by_proto(conn, "tcp")
                 scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
@@ -253,6 +271,8 @@ def main():
             )
 
             if udp_csv_path:
+                Logger.info("Deleting old UDP data")
+                delete_db_data_by_proto(conn, "udp")
                 scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
                 process_csv(udp_csv_path, "udp", conn, scan_udp_date)
                 zu.delete_file(udp_csv_path)
