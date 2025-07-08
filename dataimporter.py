@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 
 # Database connection configuration
 config = cp.ConfigParser()
@@ -93,7 +94,7 @@ LOGGING_FILE = r"/logs/logs.log"
 ARCHIVE_EXTENTION = "csv.gz"
 TCP_PREFIX = "tcp"
 UDP_PREFIX = "udp"
-
+DATA_PATH = "<yyyy>/<proto>/"
 
 Logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -103,6 +104,15 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %I:%M:%S",
 )
+
+
+def get_data_path(proto: str) -> str:
+    current_year = datetime.now().year
+    data_dir = os.path.join(
+        ARCHIVE_DIRECTORY,
+        DATA_PATH.replace("<yyyy>", str(current_year)).replace("<proto>", proto),
+    )
+    return data_dir
 
 
 # Insert data into the database
@@ -241,45 +251,49 @@ def main():
             # print("Processing TCP CSV...")
             print("[*] Processing TCP CSV...")
             Logger.info("Started processing TCP dns data")
+            data_path = get_data_path("tcp")
             tcp_csv_path, archive_tcp_csv_path = zu.unzip_recent_file_with_prefix(
-                directory=ARCHIVE_DIRECTORY,
+                directory=data_path,
                 prefix=TCP_PREFIX,
                 extention=ARCHIVE_EXTENTION,
                 outputDir=TEMP_OUTPUT_DIRECTORY,
             )
 
             if tcp_csv_path:
+                Logger.info(f"Processing file {archive_tcp_csv_path}")
                 Logger.info("Deleting old TCP data")
                 delete_db_data_by_proto(conn, "tcp")
                 scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
                 zu.delete_file(tcp_csv_path)
-                if archive_tcp_csv_path:
-                    zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
-                    # print("Cleaned after processing files for TCP")
-                    Logger.info("Cleaned after processing files for TCP")
+                # if archive_tcp_csv_path:
+                #    zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
+                #    # print("Cleaned after processing files for TCP")
+                #    Logger.info("Cleaned after processing files for TCP")
 
             # print("Processing UDP CSV...")
 
             print("[*] Processing UDP CSV...")
             Logger.info("Started processing UDP dns data")
+            data_path = get_data_path("udp")
             udp_csv_path, archive_udp_csv_path = zu.unzip_recent_file_with_prefix(
-                directory=ARCHIVE_DIRECTORY,
+                directory=data_path,
                 prefix=UDP_PREFIX,
                 extention=ARCHIVE_EXTENTION,
                 outputDir=TEMP_OUTPUT_DIRECTORY,
             )
 
             if udp_csv_path:
+                Logger.info(f"Processing file {archive_udp_csv_path}")
                 Logger.info("Deleting old UDP data")
                 delete_db_data_by_proto(conn, "udp")
                 scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
                 process_csv(udp_csv_path, "udp", conn, scan_udp_date)
                 zu.delete_file(udp_csv_path)
-                if archive_udp_csv_path:
-                    zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
-                    # print("Cleaned after processing files for UDP")
-                    Logger.info("Cleaned after processing files for UDP")
+                # if archive_udp_csv_path:
+                #    zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
+                #    # print("Cleaned after processing files for UDP")
+                #    Logger.info("Cleaned after processing files for UDP")
 
             # print("Data insertion completed successfully.")
 
