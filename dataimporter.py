@@ -5,6 +5,7 @@ import psycopg
 from psycopg import sql
 import fieldtypers as ft
 import zipFileUtils as zu
+from dataexports import create_download_files
 import logging
 import os
 import sys
@@ -89,6 +90,7 @@ IS_TESTING = False
 ARCHIVE_DIRECTORY = r"/data/"
 TEMP_OUTPUT_DIRECTORY = r"/tmp/"
 PROCESSED_DIRECTORY = r"/data/processed/"
+DOWNLOAD_DIRECTORY = os.environ.get("ODNS_DOWNLOAD_DIRECTORY", r"/data/downloads/")
 LOGGING_FILE = r"/logs/logs.log"
 
 ARCHIVE_EXTENTION = "csv.gz"
@@ -129,7 +131,7 @@ def insert_data(cursor, table_name, data, columns):
 
 # Read CSV and insert data
 def process_csv(file_path, file_type, connection, scan_date):
-    columns = CSV_COLUMNS_MAP[file_type]
+    columns = list(CSV_COLUMNS_MAP[file_type])
     columns.append("protocol")
     columns.append("scan_date")
     with open(file_path, "r") as csv_file:
@@ -265,6 +267,9 @@ def main():
                 delete_db_data_by_proto(conn, "tcp")
                 scan_tcp_date = zu.extract_file_date_from_name(archive_tcp_csv_path)
                 process_csv(tcp_csv_path, "tcp", conn, scan_tcp_date)
+                create_download_files(
+                    tcp_csv_path, "tcp", scan_tcp_date, DOWNLOAD_DIRECTORY
+                )
                 zu.delete_file(tcp_csv_path)
                 # if archive_tcp_csv_path:
                 #    zu.move_processed_file(archive_tcp_csv_path, PROCESSED_DIRECTORY)
@@ -289,6 +294,9 @@ def main():
                 delete_db_data_by_proto(conn, "udp")
                 scan_udp_date = zu.extract_file_date_from_name(archive_udp_csv_path)
                 process_csv(udp_csv_path, "udp", conn, scan_udp_date)
+                create_download_files(
+                    udp_csv_path, "udp", scan_udp_date, DOWNLOAD_DIRECTORY
+                )
                 zu.delete_file(udp_csv_path)
                 # if archive_udp_csv_path:
                 #    zu.move_processed_file(archive_udp_csv_path, PROCESSED_DIRECTORY)
@@ -299,6 +307,9 @@ def main():
 
             print("[*] Data insertion completed successfully.")
             Logger.info("Data insertion completed successfully")
+            with conn.cursor() as cursor:
+                cursor.execute("ANALYZE odns.dns_entries")
+            conn.commit()
             sys.exit(0)
     except Exception as e:
         Logger.error(f"Error occured: {e}")
